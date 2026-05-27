@@ -49,8 +49,15 @@ PicoLedMatrix::PicoLedMatrix() {
   init_rgb_tables();
 
   s_hub75 = new pimoroni::Hub75(
-      TOTAL_WIDTH, PANEL_HEIGHT, nullptr, pimoroni::PANEL_FM6126A, false,
-      static_cast<pimoroni::Hub75::COLOR_ORDER>(color_order[rgbMode]),
+      TOTAL_WIDTH, PANEL_HEIGHT, nullptr,
+#if defined(HUB75_CLK2) && defined(HUB75_CLK) && (HUB75_CLK2 != HUB75_CLK)
+      pimoroni::ShiftDriver::SHIFT_DRIVER_FM6124,
+      pimoroni::LineDecoder::LINE_DECODER_SM5368P,
+#else
+      pimoroni::ShiftDriver::SHIFT_DRIVER_FM6124,
+      pimoroni::LineDecoder::LINE_DECODER_TYPE138,
+#endif
+      false, static_cast<pimoroni::Hub75::COLOR_ORDER>(color_order[rgbMode]),
       lut_table);
   s_hub75->start(dma_complete);
 }
