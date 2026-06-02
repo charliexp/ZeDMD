@@ -1271,8 +1271,9 @@ uint8_t HandleData(uint8_t *pData, size_t len) {
 #else
             response[N_INTERMEDIATE_CTR_CHARS + 21] = 0;  // ESP32
 #endif
+#ifndef DISPLAY_RM67162_AMOLED
             response[N_INTERMEDIATE_CTR_CHARS + 22] = panelLineDecoder;
-
+#endif
             response[63 - N_ACK_CHARS] = 'R';
             Serial.write(response, 64 - N_ACK_CHARS);
             // This flush is required for USB CDC on Windows.
