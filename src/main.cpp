@@ -132,7 +132,7 @@ bool rgb565ZoneStream = false;
 uint8_t brightness = 5;
 #else
 uint8_t brightness = 2;
-uint8_t rgbMode = 0;  // Valid values are 0-5.
+uint8_t rgbMode = DEFAULT_RGB_MODE;  // Valid values are 0-5.
 uint8_t rgbModeLoaded = 0;
 uint8_t panelClkphase = 0;
 uint8_t panelDriver = 0;
@@ -479,6 +479,7 @@ void LoadRgbOrder() {
   File f = LittleFS.open("/rgb_order.val", "r");
   if (!f) {
     SaveRgbOrder();
+    rgbModeLoaded = 6;
     return;
   }
   rgbMode = rgbModeLoaded = f.read();
@@ -998,7 +999,7 @@ void DisplayLogo() {
   }
 #ifndef DISPLAY_RM67162_AMOLED
   for (uint16_t tj = 0; tj < TOTAL_BYTES; tj += 3) {
-    if (rgbMode == rgbModeLoaded) {
+    if ((rgbMode == rgbModeLoaded) || (rgbModeLoaded == 6)) {
       renderBuffer[currentRenderBuffer][tj] = f.read();
       renderBuffer[currentRenderBuffer][tj + 1] = f.read();
       renderBuffer[currentRenderBuffer][tj + 2] = f.read();
@@ -1053,7 +1054,7 @@ void DisplayFrame() {
   }
 #ifndef DISPLAY_RM67162_AMOLED
   for (uint16_t tj = 0; tj < TOTAL_BYTES; tj += 3) {
-    if (rgbMode == rgbModeLoaded) {
+    if ((rgbMode == rgbModeLoaded) || (rgbModeLoaded == 6)) {
       renderBuffer[currentRenderBuffer][tj] = f.read();
       renderBuffer[currentRenderBuffer][tj + 1] = f.read();
       renderBuffer[currentRenderBuffer][tj + 2] = f.read();
@@ -2228,10 +2229,10 @@ void setup() {
             break;
           }
           case 2: {  // Brightness
-            if (up && ++brightness > 15)
+            if (up && ++brightness > MAX_BRIGHTNESS)
               brightness = 1;
             else if (down && --brightness < 1)
-              brightness = 15;
+              brightness = MAX_BRIGHTNESS;
 
             display->SetBrightness(brightness);
             DisplayLum(255, 191, 0);
@@ -2310,7 +2311,7 @@ void setup() {
             break;
           }
           case 7: {  // RGB order
-            if (rgbModeLoaded != 0) {
+            if (rgbModeLoaded != 0 || rgbModeLoaded == 6) {
               rgbMode = 0;
               SaveRgbOrder();
               delay(10);
@@ -2719,9 +2720,8 @@ void setup1() {
 
 void loop1() {
   auto *spiTransport = static_cast<SpiTransport *>(transport);
-  static uint32_t lastDmdReaderInitAttempt = 0;
 
-  if (!spiTransport->isDmdReaderInitialized() && transport->isLoopback()) {
+  if (!spiTransport->isDmdReaderInitialized()) {
     spiTransport->initDmdReader();
     // Blink to indicate that loopback mode is active but DMD reader is not yet
     // initialized.
@@ -2730,9 +2730,7 @@ void loop1() {
     digitalWrite(LED_BUILTIN, LOW);
     delay(200);
     return;
-  }
-
-  if (!transport->isLoopback()) {
+  } else if (!transport->isLoopback()) {
     dmdreader_spi_send();
     tight_loop_contents();
   } else {
